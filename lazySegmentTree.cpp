@@ -25,6 +25,7 @@ class segmentTree
 {
 private:
   vector<T> tree;
+  vector<T> lazy;
   ll leavesSize;
   T fill;
   Fn binaryOperation;
@@ -36,17 +37,38 @@ private:
     if (endIdx <= leftIdx || rightIdx <= startIdx)
       return fill;
     //今考えている区間がクエリ区間に完全に入る場合
+    //FIXME lazyとtree間での処理を考える
     else if (leftIdx <= startIdx && endIdx <= rightIdx)
     {
-      return tree[innerIdx];
+      return tree[innerIdx] + lazy[innerIdx];
     }
     //部分的に入っている場合
+    //FIXME lazyとの兼ね合いなど一般化したい
     else
     {
       T cand1, cand2;
       cand1 = innerQuery(startIdx, (startIdx + endIdx) / 2, leftIdx, rightIdx, innerIdx * 2 + 1);
       cand2 = innerQuery((startIdx + endIdx) / 2, endIdx, leftIdx, rightIdx, innerIdx * 2 + 2);
       return binaryOperation(cand1, cand2);
+    }
+  }
+  void innerUpdate(ll startIdx, ll endIdx, ll leftIdx, ll rightIdx, ll innerIdx, T value)
+  {
+    //いま考えている区間がクエリ区間に入らない場合
+    if (endIdx <= leftIdx || rightIdx <= startIdx)
+      return;
+    //今考えている区間がクエリ区間に完全に入る場合
+    else if (leftIdx <= startIdx && endIdx <= rightIdx)
+    {
+      //FIXME lazyに入れるときの処理を書くこと
+      lazy[innerIdx] = lazy[innerIdx] + 1;
+      return;
+    }
+    //部分的に入っている場合
+    else
+    {
+      innerUpdate(startIdx, (startIdx + endIdx) / 2, leftIdx, rightIdx, innerIdx * 2 + 1, value);
+      innerUpdate((startIdx + endIdx) / 2, endIdx, leftIdx, rightIdx, innerIdx * 2 + 2, value);
     }
   }
 
@@ -64,6 +86,7 @@ public:
       leavesSize *= 2;
     }
     tree = vector<T>(leavesSize * 2 - 1, fill);
+    lazy = vector<T>(leavesSize * 2 - 1, fill);
     //入力値を葉に代入
     for (ll i = 0; i < originalSize; i++)
     {
@@ -80,15 +103,18 @@ public:
       }
     }
   }
-  void update(ll idx, T value)
+  void update(T value, ll leftIdx, ll rightIdx)
   {
-    ll innerIdx = leavesSize - 1 + idx;
-    tree[innerIdx] = value;
-    while (innerIdx > 0)
+    innerUpdate(0, leavesSize, leftIdx, rightIdx, value);
+  }
+  void show()
+  {
+
+    for (ll i = 0; i < originalSize; i++)
     {
-      innerIdx = (innerIdx - 1) / 2;
-      tree[innerIdx] = binaryOperation(tree[innerIdx * 2 + 1], tree[innerIdx * 2 + 2]);
+      cout << tree[leavesSize - 1 + i];
     }
+    cout << endl;
   }
   //updateのオーバーロード
   //更新時に既存の値との二項演算を行いたい場合こちらを使う
